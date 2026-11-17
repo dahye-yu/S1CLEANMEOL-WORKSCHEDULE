@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>월간 근무표 생성기</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    #lockOverlay{position:fixed;top:0;left:0;right:0;bottom:0;background:#0f1620;z-index:9999;display:flex;align-items:center;justify-content:center;}
+    .lock-box{background:#fff;padding:28px;border-radius:14px;width:320px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.3);}
+    .lock-box h2{font-size:16px;margin-bottom:16px;color:#1f2733;}
+    .lock-box input{width:100%;padding:11px;border:1px solid #ccd3dd;border-radius:8px;font-size:15px;text-align:center;box-sizing:border-box;}
+    .lock-box input:focus{outline:2px solid #2b6cb055;border-color:#2b6cb0;}
+    .lock-box button{width:100%;margin-top:12px;padding:11px;background:#2b6cb0;color:#fff;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-weight:600;}
+    .lock-box button:hover{background:#2b6cb0cc;}
+    .lock-msg{color:#b3261e;font-size:13px;margin-top:10px;}
+  </style>
+</head>
+<body>
+  <!-- 비밀번호 잠금 (경량 클라이언트 방식) -->
+  <div id="lockOverlay">
+    <div class="lock-box">
+      <h2>비밀번호를 입력하세요</h2>
+      <input type="password" id="lockPw" placeholder="비밀번호" autocomplete="off">
+      <button id="lockBtn" type="button">입장</button>
+      <p id="lockMsg" class="lock-msg" hidden>비밀번호가 올바르지 않습니다.</p>
+    </div>
+  </div>
+  <div class="app">
+    <header>
+      <h1>월간 근무표 생성기</h1>
+      <p>GY 회전과 근무 제약을 반영해 한 달 치 근무표를 자동 생성합니다.</p>
+    </header>
+
+    <div id="errorBox" class="error-box" hidden></div>
+
+    <!-- 설정 패널 -->
+    <section class="panel setup">
+      <div class="col">
+        <h2>직원 명단</h2>
+        <textarea id="staffInput" rows="8"
+          placeholder="한 줄에 한 명씩 입력&#10;홍길동&#10;김철수&#10;이영희&#10;박민수"></textarea>
+        <p class="hint">고정 인원 15명. <b>김지욱·장효영</b>은 리더로 SHIFT(특수근무) 배정에서 제외됩니다.</p>
+      </div>
+
+      <div class="col">
+        <h2>근무 규칙</h2>
+        <div class="rules-box">
+          <p><b>평일(월~금)</b></p>
+          <ul>
+            <li>당번 1명 · SW 1명 · GY 1명</li>
+            <li>나머지 OFFICE</li>
+          </ul>
+          <p><b>주말(토·일)</b></p>
+          <ul>
+            <li>DAY/OFFICE 1명 · SW 1명 · GY 1명</li>
+            <li>나머지 휴무</li>
+          </ul>
+          <p><b>연속 제약</b></p>
+          <ul>
+            <li>SW 근무자는 다음날 당번·DAY 배정 제외</li>
+            <li>당번 제외 DAY·SW·GY 합계: 6일 GY 블록 참여자는 <b>무조건 10</b>으로 고정, 그 외 SHIFT원은 6 지향</li>
+          </ul>
+          <p><b>패밀리데이</b></p>
+          <ul>
+            <li>매월 21일(월급일)이 속한 주의 금요일: DAY·SW·GY만 근무, 나머지는 <b>F/D</b>로 표기</li>
+            <li>선정된 금요일이 공휴일이면 <b>직전주 금요일</b>로 선정</li>
+            <li>21일이 월요일이면서 공휴일이면 그 직전 금요일로 선정</li>
+          </ul>
+          <p><b>인원 제약</b></p>
+          <ul>
+            <li>리더(김지욱·장효영): 전 SHIFT 제외</li>
+            <li>신민지·남재현·유다혜·김유신·박수정: 평일 SHIFT 제외</li>
+            <li>신민지·유다혜·박수정: 주말 DAY/OFFICE만</li>
+            <li>남재현·김유신: 주말 DAY/OFFICE 또는 1일 GY</li>
+            <li><b>신민지·남재현·유다혜·김유신·박수정: SW 전면 제외</b></li>
+            <li>GY: 8명 순환, 1명이 일~금 전담·토 휴무</li>
+          </ul>
+        </div>
+        <div class="row-field">
+          <label>시작 날짜</label>
+          <input type="date" id="startDate">
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="generateBtn">근무표 생성</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 공휴일 · 개별 제약 -->
+    <section class="panel setup">
+      <div class="col">
+        <h2>공휴일</h2>
+        <p class="hint">공휴일은 주말처럼 처리됩니다. (YYYY-MM-DD 또는 M/D, 줄바꿈/콤마 구분)</p>
+        <textarea id="holidayInput" rows="5"
+          placeholder="2026-12-25&#10;2026-03-01"></textarea>
+      </div>
+      <div class="col">
+        <h2>개별 근무 제약</h2>
+        <p class="hint">한 줄에 하나씩: <b>이름 | 대상 | 역할</b></p>
+        <textarea id="rulesInput" rows="6"
+          placeholder="정의정 | 화,목 | SW&#10;서지현 | 3토 | SW&#10;최서락 | 12/26~12/27 | 휴무&#10;김민송 | 12/17 | 연차"></textarea>
+        <p class="hint">대상: 날짜(2026-12-25, 12/25) · 기간(12/28~12/31) · 요일(화,목) · N번째요일(3토)<br>역할: SW·GY·당번·DAY(해당 역할 배정 제외) · <b>휴무·연차(근무 불가 · 평일은 '연차', 주말·공휴일은 '휴무'로 표시)</b> · *</p>
+      </div>
+    </section>
+
+    <!-- 데이터 불러오기 -->
+    <section class="panel import">
+      <button type="button" class="btn secondary" id="importToggle">데이터 붙여넣기로 불러오기 (기존 근무표)</button>
+      <div id="importBody" hidden>
+        <p class="hint">엑셀에서 복사한 표를 그대로 붙여넣으세요. 첫 행에 날짜(예: 11/1), 둘째 행에 요일, 이후 행에 직원별 근무가 있어야 합니다.</p>
+        <textarea id="importInput" rows="10"
+          placeholder="엑셀에서 복사(Ctrl+C)한 근무표를 여기에 붙여넣기(Ctrl+V) 하세요."></textarea>
+        <div class="btn-row">
+          <button class="btn primary" id="importBtn">불러오기</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 결과 -->
+    <section class="panel result" id="resultPanel" hidden>
+      <div class="result-toolbar">
+        <h2 id="weekTitle">월간 근무표</h2>
+        <div>
+          <button class="btn secondary" id="prevWeekBtn">◀ 이전달</button>
+          <button class="btn secondary" id="nextWeekBtn">다음달 ▶</button>
+          <button class="btn" id="exportBtn">엑셀(CSV) 내보내기</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table id="scheduleTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <!-- 요약 -->
+      <div class="summary-wrap">
+        <h3>근무 요약 (집계)</h3>
+        <table id="summaryTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
