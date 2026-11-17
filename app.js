@@ -1,4 +1,3 @@
-// ===== 상태 =====
 let staff = [];
 let now = new Date();
 let mode = "generate";     // generate | import
@@ -6,21 +5,16 @@ let importData = null;
 
 const LEADERS = ["김지욱", "장효영"];
 
-// 평일 SHIFT 제외(주말만 SHIFT 가능)
 const WEEKDAY_NO_SHIFT = ["신민지", "남재현", "유다혜", "김유신", "박수정"];
-// 주말 DAY/OFFICE 슬롯만 가능
 const WEEKEND_OFFICE_ONLY = ["신민지", "유다혜", "박수정"];
-// 주말 DAY/OFFICE 또는 하루짜리 GY 가능
 const WEEKEND_OFFICE_OR_GY = ["남재현", "김유신"];
-// SW 근무 전면 제외 (평일·주말·균형화 포함)
 const SW_NO = ["신민지", "남재현", "유다혜", "김유신", "박수정"];
 const isSwBanned = (n) => SW_NO.includes(n);
+const FAMILY_DAY_EXCLUDE = ["신민지", "남재현", "유다혜", "김유신"];
+const isFdExcluded = (n, it) => !!it.familyDay && FAMILY_DAY_EXCLUDE.includes(n);
 
-// ===== 고정 회전 (앵커 기준) =====
-// 6일 연속 GY (일~금): 2026-11-15(일) 김민송 시작
 const GY_BLOCK_ANCHOR = new Date(2026, 10, 15);
 const GY_BLOCK_ORDER = ["김민송", "최서락", "서지현", "정의정", "김예빈", "이권재", "조이준", "전성민"];
-// 하루짜리 GY (토): 2026-11-14(토) 서지현 시작
 const SINGLE_GY_ANCHOR = new Date(2026, 10, 14);
 const SINGLE_GY_ORDER = ["서지현", "남재현", "김예빈", "조이준", "김유신", "정의정", "최서락", "김민송", "이권재"];
 
@@ -31,7 +25,6 @@ const WEEKDAY_INDEX = { 일: 0, 월: 1, 화: 2, 수: 3, 목: 4, 금: 5, 토: 6 }
 
 const $ = (id) => document.getElementById(id);
 
-// ===== 날짜 유틸 =====
 function sod(d) { const t = new Date(d); t.setHours(0, 0, 0, 0); return t; }
 function daysBetween(a, b) { return Math.round((sod(b) - sod(a)) / 86400000); }
 function fmtDate(d) { return `${d.getMonth() + 1}/${d.getDate()}`; }
@@ -46,7 +39,6 @@ function esc(s) {
 }
 const mod = (a, n) => ((a % n) + n) % n;
 
-// ===== 공휴일 / 개별 제약 =====
 let holidays = new Set();
 let personRules = [];
 
@@ -84,7 +76,6 @@ function parseDateToken(tok, year) {
 function matchTarget(tok, date) {
   tok = String(tok).trim();
   const year = date.getFullYear();
-  // 기간: A~B (예: 12/28~12/31, 2026-12-28~2026-12-31)
   const range = tok.split(/[~～]/);
   if (range.length === 2) {
     const a = parseDateToken(range[0].trim(), year);
@@ -113,8 +104,6 @@ function isBlocked(name, role, date) {
   }
   return false;
 }
-// 해당 날짜에 휴무/연차 지정이 있으면 코드를 반환
-// 규칙: 평일(근무일)=연차, 주말·공휴일=휴무
 function offCode(name, date) {
   for (const r of personRules) {
     if (r.name !== name) continue;
@@ -130,7 +119,6 @@ function offCode(name, date) {
   return null;
 }
 
-// ===== 회전 담당자 계산 =====
 function blockOwner(sundayDate) {
   const weeks = Math.round(daysBetween(GY_BLOCK_ANCHOR, sundayDate) / 7);
   const pool = GY_BLOCK_ORDER.filter((n) => staff.includes(n));
@@ -144,7 +132,6 @@ function singleOwner(saturdayDate) {
   return pool[mod(weeks, pool.length)];
 }
 
-//  월 단위 자동 생성
 function generateMonth() {
   if (staff.length === 0) throw new Error("직원 명단이 비어 있습니다.");
   holidays = parseHolidays($("holidayInput") ? $("holidayInput").value : "");
@@ -155,21 +142,15 @@ function generateMonth() {
   const dates = [];
   for (let dd = 1; dd <= last; dd++) dates.push(new Date(year, month, dd));
 
-  // 패밀리데이: 21일(월급일)이 속한 주(월~일)의 금요일.
-  //  단, ① 21일이 월요일이면서 공휴일이면 그 직전 금요일,
-  //  ② 선정된 금요일이 공휴일이면 직전주의 금요일로 이동.
   const familyDay = (() => {
     const d21 = new Date(year, month, 21);
-    // 기본: 21일이 속한 주(월~일)의 금요일
     const monday = new Date(d21);
     monday.setDate(d21.getDate() - ((d21.getDay() + 6) % 7));
     const friday = new Date(monday);
     friday.setDate(monday.getDate() + 4);
-    // ① 21일이 월요일 & 공휴일 -> 그 직전 금요일
     if (d21.getDay() === 1 && holidays.has(isoDate(d21))) {
       friday.setDate(d21.getDate() - 3);
     }
-    // ② 선정된 금요일이 공휴일이면 직전주 금요일로 이동
     let guard = 0;
     while (holidays.has(isoDate(friday)) && guard < 4) {
       friday.setDate(friday.getDate() - 7);
@@ -197,7 +178,6 @@ function generateMonth() {
     p.lastShift = di;
   };
 
-  // 1) 날짜 정보 + 고정 GY
   const info = [];
   dates.forEach((date, di) => {
     const dow = date.getDay();
@@ -215,13 +195,10 @@ function generateMonth() {
     info.push({ date, di, dow, weekendLike, gy, gt, needsGy: false, familyDay: !!fd });
   });
 
-  // 하루짜리(토요일) GY: 한 달에 같은 사람이 두 번 들어가지 않도록 추적
   const singleGyThismonth = new Set();
 
-  // 6일짜리 GY 블록을 실제로 도는 인원 (해당월 DAY+SW+GY 목표 10)
   const blockGyPeople = new Set();
 
-  // 1-1) 고정 GY 배정 (해당자가 휴무/연차면 그날은 대체 GY 필요)
   info.forEach((it) => {
     if (it.gy && !offCode(it.gy, it.date)) {
       place(it.gy, "GY", it.di);
@@ -232,7 +209,6 @@ function generateMonth() {
     }
   });
 
-  // 2) 주말/공휴일 그룹(토~일) 구성
   const groups = new Map();
   info.forEach((it) => {
     if (!it.weekendLike) return;
@@ -245,27 +221,22 @@ function generateMonth() {
   });
   const order = [...groups.keys()].sort((a, b) => groups.get(a)[0].di - groups.get(b)[0].di);
 
-  // 후보 풀 (SHIFT 근무자 = 리더 제외)
   const shiftStaff = staff.filter((n) => !LEADERS.includes(n));
   const wdPool = shiftStaff.filter((n) => !WEEKDAY_NO_SHIFT.includes(n));
   const swPool = shiftStaff.filter((n) => !WEEKEND_OFFICE_ONLY.includes(n) && !WEEKEND_OFFICE_OR_GY.includes(n));
   const dayPool = shiftStaff.slice();
   const gyPool = shiftStaff.filter((n) => GY_BLOCK_ORDER.includes(n) || WEEKEND_OFFICE_OR_GY.includes(n));
 
-  // 블록(2일+ 연속 휴무) 추정치
   const blk = {};
   shiftStaff.forEach((n) => { blk[n] = 0; });
 
-  // 금요일 SW 분산 카운터 (기피 근무)
   const friSW = {};
   shiftStaff.forEach((n) => { friSW[n] = 0; });
 
   const secPenalty = (n, di) => (Math.abs(di - byName[n].lastShift) === 1 ? 1 : 0);
 
-  // 규칙: SW 근무한 사람은 다음날 당번/DAY로 배정하지 않음
   const hadSwPrev = (n, di) => di > 0 && shifts[n][di - 1] === "SW";
 
-  // 대체 GY 선택 (휴무/연차·이미 배정된 인원 제외, GY 적게 한 사람 우선)
   const pickGy = (date, used) => {
     let cand = gyPool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, "GY", date) && !offCode(n, date));
     if (cand.length === 0) cand = dayPool.filter((n) => !used.has(n) && !isBlocked(n, "GY", date) && !offCode(n, date));
@@ -274,8 +245,6 @@ function generateMonth() {
     return cand[0];
   };
 
-  // 3) 주말 그룹별 유연 배정 (SW/DAY, 공휴일 GY)
-  //    블록이 많은 사람을 우선 근무시켜 추가 블록을 막아 균형화
   for (const key of order) {
     const members = groups.get(key);
     const full = members.length === 2;
@@ -287,12 +256,11 @@ function generateMonth() {
       if (it.needsGy) roles.push("GY");
       roles.push("SW", "DAY");
       for (const role of roles) {
-        // SW 다음날 당번/DAY 배정 금지 (주말 DAY)
         const noSwNext = role === "DAY" ? (n) => !hadSwPrev(n, it.di) : () => true;
         let pool = role === "GY" ? gyPool : role === "SW" ? swPool : dayPool;
-        let cand = pool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, role, it.date) && !offCode(n, it.date) && noSwNext(n) && !(role === "SW" && isSwBanned(n)));
+        let cand = pool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, role, it.date) && !offCode(n, it.date) && noSwNext(n) && !(role === "SW" && isSwBanned(n)) && !isFdExcluded(n, it));
         if (cand.length === 0) {
-          cand = dayPool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, role, it.date) && !offCode(n, it.date) && !(role === "SW" && isSwBanned(n)));
+          cand = dayPool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, role, it.date) && !offCode(n, it.date) && !(role === "SW" && isSwBanned(n)) && !isFdExcluded(n, it));
         }
         if (cand.length === 0) continue;
         const isFriSW = role === "SW" && it.date.getDay() === 5;
@@ -314,7 +282,6 @@ function generateMonth() {
     }
   }
 
-  // 4) 평일: 대체 GY + 당번/SW
   for (const it of info) {
     if (it.weekendLike) continue;
     const used = new Set();
@@ -325,7 +292,6 @@ function generateMonth() {
       used.add(it.gy);
     }
     for (const role of ["당번", "SW"]) {
-      // SW 다음날 당번 배정 금지
       const noSwNext = role === "당번" ? (n) => !hadSwPrev(n, it.di) : () => true;
       let cand = wdPool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, role, it.date) && !offCode(n, it.date) && noSwNext(n) && !(role === "SW" && isSwBanned(n)));
       if (cand.length === 0) cand = dayPool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, role, it.date) && !offCode(n, it.date) && !(role === "SW" && isSwBanned(n)));
@@ -341,7 +307,6 @@ function generateMonth() {
     }
   }
 
-  // 5) 나머지 기본값 (휴무/연차 지정일 우선)
   staff.forEach((n) => {
     for (let di = 0; di < dates.length; di++) {
       if (shifts[n][di] === null) {
@@ -353,24 +318,17 @@ function generateMonth() {
     }
   });
 
-  // 5.5) 균형화: 당번 제외 DAY/SW/GY 합계를 가능한 한 6~10에 맞춤
   balanceRotation(shifts, dates, info, byName);
 
-  // 6) 2일+ 연속 휴무 실제 집계
   const blockCount = {};
   staff.forEach((n) => { blockCount[n] = countBlocks(shifts[n]); });
 
-  //  균형화 헬퍼 (당번 제외 DAY/SW/GY 합계 목표: 가능한 한 6~10)
-  //   - 10 초과 인원의 SW·DAY를 낮은 인원에게 양도 (최대치 축소)
-  //   - 가장 적게 근무한 인원을 우선 채워 낮은 값(→~6)을 끌어올림
-  //   - 1일 1명 원칙을 지키며 같은 날짜 안에서 SW/DAY 소유권만 스왑
   function balanceRotation(shifts, dates, info, byName) {
     const rotCount = (name) => {
       let c = 0;
       for (const r of ["DAY", "SW", "GY"]) c += byName[name].roleCount[r] || 0;
       return c;
     };
-    // 목표: 6일 GY 블록 참여자 10, 그 외 SHIFT원 6
     const target = (name) => (blockGyPeople.has(name) ? 10 : 6);
     const dev = (name) => rotCount(name) - target(name); // 양수=목표 초과, 음수=미달
     const holder = (di, role) => staff.find((n) => shifts[n][di] === role);
@@ -391,19 +349,17 @@ function generateMonth() {
           if (!owner) continue;
           if (LEADERS.includes(owner)) continue;
 
-          // 그날 해당 역할 자리가 비어있고(휴무/OFFICE) 차지 가능한 후보
-          // 부수 제약: SW 다음날 당번/DAY 금지 규칙을 지키면서 스왑
           const candidates = shiftStaff.filter((n) =>
             n !== owner
             && (shifts[n][di] === WORK_OFFICE || shifts[n][di] === OFF_DAY)
             && !isBlocked(n, role, dates[di])
             && !offCode(n, dates[di])
+            && !isFdExcluded(n, info[di])
             && !(role === "SW" && isSwBanned(n)) // SW 제외 인원에게 SW 양도 금지
             && (role !== "DAY" || !(di > 0 && shifts[n][di - 1] === "SW")) // DAY를 받아도 전날 SW면 금지
             && (role !== "SW" || !(di + 1 < dates.length && (shifts[n][di + 1] === "DAY" || shifts[n][di + 1] === "당번"))) // SW 다음날 DAY/당번 금지
           );
           if (!candidates.length) continue;
-          // 목표에서 가장 많이 미달된 인원에게 양도
           const best = candidates.slice().sort((a, b) => dev(a) - dev(b))[0];
           if (dev(owner) - dev(best) >= 2) { // 양도 후 목표 편차 합이 줄어드는 경우만
             apply(di, role, owner, best);
@@ -414,11 +370,9 @@ function generateMonth() {
       }
     }
 
-    // === 6일 GY 참여자는 무조건 정확히 10으로 강제 보정 ===
-    //   - 10 미만: p가 쉬는 날의 SW/DAY 슬롯을 다른 사람에게서 가져와 채움
-    //   - 10 초과: p의 SW/DAY 슬롯을 다른 사람에게 넘김
     const canTake = (n, di, role) => {
       if (LEADERS.includes(n)) return false;
+      if (isFdExcluded(n, info[di])) return false;
       if (!(shifts[n][di] === WORK_OFFICE || shifts[n][di] === OFF_DAY)) return false;
       if (isBlocked(n, role, dates[di])) return false;
       if (offCode(n, dates[di])) return false;
@@ -436,7 +390,6 @@ function generateMonth() {
         if (c === GOAL) continue;
 
         if (c > GOAL) {
-          // 초과분을 다른 인원(비참여자 우선, 적게 일한 사람)에게 양도
           let mv = null;
           for (let di = 0; di < dates.length && !mv; di++) {
             for (const role of ["SW", "DAY"]) {
@@ -451,8 +404,6 @@ function generateMonth() {
           }
           if (mv) { apply(mv.di, mv.role, p, mv.cand); changed = true; }
         } else {
-          // 미달분을 p가 쉬는 날의 SW/DAY 슬롯을 가져와 채움
-          //   비참여자에게서만 가져옴 → 참여자끼리 슬롯을 주고받는 진동(무한 반복) 방지
           let mv = null;
           for (let di = 0; di < dates.length && !mv; di++) {
             if (!(shifts[p][di] === WORK_OFFICE || shifts[p][di] === OFF_DAY)) continue;
@@ -479,7 +430,6 @@ function generateMonth() {
   return { dates, info, shifts, people, blockCount, year, month, blockGyPeople };
 }
 
-// 2일 이상 연속 휴무(주말·연차 포함) 횟수
 function countBlocks(row) {
   let cnt = 0, run = 0;
   for (let i = 0; i < row.length; i++) {
@@ -490,7 +440,6 @@ function countBlocks(row) {
   return cnt;
 }
 
-//  렌더링 (월 단위)
 let lastResult = null;
 
 function render() {
@@ -559,7 +508,6 @@ function shiftCell(code, label) {
   return `<td class="sched ${codeClass(code)}"><div class="cell-label">${esc(label)}</div></td>`;
 }
 
-// 월 요약: 역할 집계 + 금요일 SW + 연속휴무(주말·연차 포함)
 function renderSummary(counts, res) {
   const thead = $("summaryTable").querySelector("thead");
   const tbody = $("summaryTable").querySelector("tbody");
@@ -570,7 +518,6 @@ function renderSummary(counts, res) {
   head += "<th>당번제외<br>(DAY+SW+GY)</th><th>금요일 SW</th><th>2일+ 연속휴무</th></tr>";
   thead.innerHTML = head;
 
-  // 금요일 SW 횟수 계산
   const friCnt = {};
   for (const p of res.people) {
     let c = 0;
@@ -579,14 +526,12 @@ function renderSummary(counts, res) {
     }
     friCnt[p.name] = c;
   }
-  // 당번 제외 DAY/SW/GY 합계
   const rotSum = {};
   for (const p of res.people) {
     const c = counts[p.name] || {};
     rotSum[p.name] = (c["DAY"] || 0) + (c["SW"] || 0) + (c["GY"] || 0);
   }
 
-  // SHIFT 근무자 분포 계산
   const shiftStaff = staff.filter((n) => !LEADERS.includes(n));
   const distVals = shiftStaff.map((n) => res.blockCount[n]);
   const friVals = shiftStaff.map((n) => friCnt[n]);
@@ -600,7 +545,6 @@ function renderSummary(counts, res) {
     distText = `SHIFT 근무자 2일+ 연속휴무(주말·연차 포함): ${parts.join(" / ")}` +
       (min === max ? " (완전 동일)" : " (최소 편차)") +
       `  ·  금요일 SW: 최대 ${fmax}회` + (fmin === fmax ? " (동일)" : ` (최소 ${fmin}~최대 ${fmax})`);
-    // 당번 제외 DAY/SW/GY 합계 분포 (6일 GY 참여자 목표 10 / 그 외 6)
     const blockGy = res.blockGyPeople || new Set();
     const fmtDist = (names) => {
       if (!names.length) return "없음";
@@ -638,7 +582,6 @@ function renderSummary(counts, res) {
   note.textContent = distText;
 }
 
-//  데이터 불러오기 (붙여넣기) — 기존 기능 유지
 function parseImportedTable(text) {
   const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "");
   if (lines.length < 2) throw new Error("붙여넣은 데이터가 형식에 맞지 않습니다.");
@@ -740,7 +683,6 @@ function renderImportSummary(counts, codeList) {
   const note = $("distNote"); if (note) note.textContent = "";
 }
 
-// ===== CSV =====
 function exportCSV() {
   let rows = [], fileName = "";
   if (mode === "import" && importData) {
@@ -766,7 +708,6 @@ function exportCSV() {
   URL.revokeObjectURL(a.href);
 }
 
-// ===== 이벤트 =====
 function parseStaffInput(text) {
   return text.split(/[\n,，]/).map((s) => s.trim()).filter(Boolean);
 }
@@ -811,7 +752,6 @@ $("prevWeekBtn").addEventListener("click", () => { now = new Date(now.getFullYea
 $("nextWeekBtn").addEventListener("click", () => { now = new Date(now.getFullYear(), now.getMonth() + 1, 1); safeGenerate(); });
 $("exportBtn").addEventListener("click", exportCSV);
 
-// 전역 예외도 화면에 표시
 window.addEventListener("error", (e) => {
   showError("스크립트 오류: " + (e.message || "알 수 없음") + (e.filename ? `\n@ ${e.filename}:${e.lineno}:${e.colno}` : ""));
 });
@@ -838,7 +778,6 @@ window.addEventListener("unhandledrejection", (e) => {
       "서지현 | 3토 | SW",
     ].join("\n");
 
-    // 개별 근무 제약: 마지막 입력을 로컬(localStorage)에 저장/복원
     const RULES_KEY = "schedule_personRules";
     try {
       const saved = localStorage.getItem(RULES_KEY);
@@ -866,8 +805,6 @@ window.addEventListener("unhandledrejection", (e) => {
   }
 })();
 
-// ===== 비밀번호 잠금 (경량 클라이언트 방식) =====
-// !! 배포 전에 아래 비밀번호를 반드시 원하는 값으로 바꾸세요 !!
 const ACCESS_PASSWORD = "MEOL123!";
 (function loginGate() {
   const overlay = document.getElementById("lockOverlay");
@@ -890,6 +827,5 @@ const ACCESS_PASSWORD = "MEOL123!";
   btn.addEventListener("click", attempt);
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") attempt(); });
   input.focus();
-  // 잠금 상태에서만 스크롤 방지 (해제 시 위에서 overflow 초기화)
   document.body.style.overflow = "hidden";
 })();
