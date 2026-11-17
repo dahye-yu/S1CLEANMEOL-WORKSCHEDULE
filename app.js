@@ -2,6 +2,7 @@ let staff = [];
 let now = new Date();
 let mode = "generate";     // generate | import
 let importData = null;
+let jigunUsers = new Set();
 
 const LEADERS = ["김지욱", "장효영"];
 
@@ -107,6 +108,12 @@ function isBlocked(name, role, date) {
 function offCode(name, date) {
   for (const r of personRules) {
     if (r.name !== name) continue;
+    if (r.role === "지휴") {
+      for (const t of r.targets) {
+        if (matchTarget(t, date)) return "지휴";
+      }
+      continue;
+    }
     if (r.role !== "휴무" && r.role !== "연차") continue;
     for (const t of r.targets) {
       if (matchTarget(t, date)) {
@@ -433,7 +440,7 @@ function generateMonth() {
 function countBlocks(row) {
   let cnt = 0, run = 0;
   for (let i = 0; i < row.length; i++) {
-    if (row[i] === OFF_DAY || row[i] === "연차" || row[i] === "F/D") { run++; }
+    if (row[i] === OFF_DAY || row[i] === "연차" || row[i] === "F/D" || row[i] === "지휴") { run++; }
     else { if (run >= 2) cnt++; run = 0; }
   }
   if (run >= 2) cnt++;
@@ -443,6 +450,7 @@ function countBlocks(row) {
 let lastResult = null;
 
 function render() {
+  parseJigunInput();
   const res = generateMonth();
   lastResult = res;
   mode = "generate";
@@ -466,8 +474,9 @@ function render() {
     counts[p.name] = counts[p.name] || {};
     for (let di = 0; di < res.dates.length; di++) {
       const s = row[di];
-      counts[p.name][s] = (counts[p.name][s] || 0) + 1;
-      body += shiftCell(s, shortLabel(s));
+      const lab = displayShift(p.name, s, di, res.info);
+      counts[p.name][lab] = (counts[p.name][lab] || 0) + 1;
+      body += shiftCell(lab, shortLabel(lab));
     }
     body += `<td>${p.leader ? "-" : res.blockCount[p.name]}</td></tr>`;
   }
@@ -479,6 +488,16 @@ function render() {
   $("resultPanel").hidden = false;
 }
 
+function baseRole(label) {
+  if (label === "DAY" || label === "SW" || label === "GY") return label;
+  return (label === "지D" || label === "특D") ? "DAY" : (label === "지S" || label === "특S") ? "SW" : (label === "지G" || label === "특G") ? "GY" : null;
+}
+function displayShift(name, code, di, info) {
+  if ((code === "DAY" || code === "SW" || code === "GY") && info[di].weekendLike) {
+    return (jigunUsers.has(name) ? "지" : "특") + { "DAY": "D", "SW": "S", "GY": "G" }[code];
+  }
+  return code;
+}
 function shortLabel(code) {
   switch (code) {
     case "당번": return "당번";
@@ -494,10 +513,10 @@ function shortLabel(code) {
 function codeClass(code) {
   switch (code) {
     case "당번": return "cell-dang";
-    case "SW": return "cell-sw";
-    case "GY": return "cell-gy";
-    case "DAY": return "cell-day";
-    case "연차": return "cell-leave";
+    case "SW": case "지S": case "특S": return "cell-sw";
+    case "GY": case "지G": case "특G": return "cell-gy";
+    case "DAY": case "지D": case "특D": return "cell-day";
+    case "연차": case "지휴": return "cell-leave";
     case "F/D": return "cell-fd";
     case "OFFICE": return "cell-office";
     case "휴무": case "휴": case "": return "cell-off";
@@ -511,7 +530,7 @@ function shiftCell(code, label) {
 function renderSummary(counts, res) {
   const thead = $("summaryTable").querySelector("thead");
   const tbody = $("summaryTable").querySelector("tbody");
-  const codes = [WORK_OFFICE, "당번", "DAY", "SW", "GY", OFF_DAY, "연차", "F/D"];
+  const codes = [WORK_OFFICE, "당번", "DAY", "SW", "GY", "지D", "지S", "지G", "특D", "특S", "특G", "지휴", OFF_DAY, "연차", "F/D"];
 
   let head = "<tr><th>직원</th>";
   codes.forEach((c) => { head += `<th class="cell-label">${esc(c)}</th>`; });
@@ -522,14 +541,18 @@ function renderSummary(counts, res) {
   for (const p of res.people) {
     let c = 0;
     for (let di = 0; di < res.dates.length; di++) {
-      if (res.dates[di].getDay() === 5 && res.shifts[p.name][di] === "SW") c++;
+      if (res.dates[di].getDay() === 5 && baseRole(displayShift(p.name, res.shifts[p.name][di], di, res.info)) === "SW") c++;
     }
     friCnt[p.name] = c;
   }
   const rotSum = {};
   for (const p of res.people) {
-    const c = counts[p.name] || {};
-    rotSum[p.name] = (c["DAY"] || 0) + (c["SW"] || 0) + (c["GY"] || 0);
+    const row = res.shifts[p.name];
+    let r = 0;
+    for (let di = 0; di < res.dates.length; di++) {
+      if (baseRole(displayShift(p.name, row[di], di, res.info))) r++;
+    }
+    rotSum[p.name] = r;
   }
 
   const shiftStaff = staff.filter((n) => !LEADERS.includes(n));
@@ -692,10 +715,11 @@ function exportCSV() {
   } else {
     if (!lastResult) lastResult = generateMonth();
     const res = lastResult;
+    parseJigunInput();
     const head = ["직원", ...res.dates.map((d) => `${d.getDate()}(${WEEKDAYS[d.getDay()]})`), "2일+연속휴무"];
     rows.push(head);
     for (const p of res.people) {
-      rows.push([p.name, ...res.shifts[p.name], p.leader ? "" : res.blockCount[p.name]]);
+      rows.push([p.name, ...res.shifts[p.name].map((s, di) => displayShift(p.name, s, di, res.info)), p.leader ? "" : res.blockCount[p.name]]);
     }
     fileName = `근무표_${res.year}-${String(res.month + 1).padStart(2, "0")}.csv`;
   }
@@ -710,6 +734,10 @@ function exportCSV() {
 
 function parseStaffInput(text) {
   return text.split(/[\n,，]/).map((s) => s.trim()).filter(Boolean);
+}
+function parseJigunInput() {
+  const el = $("jigunInput");
+  jigunUsers = new Set(el ? parseStaffInput(el.value) : []);
 }
 function showError(msg) {
   const el = $("errorBox");
@@ -786,6 +814,16 @@ window.addEventListener("unhandledrejection", (e) => {
     $("rulesInput").addEventListener("input", () => {
       try { localStorage.setItem(RULES_KEY, $("rulesInput").value); } catch (e) { /* ignore */ }
     });
+
+    const JIGUN_KEY = "schedule_jigunUsers";
+    try {
+      const saved = localStorage.getItem(JIGUN_KEY);
+      if (saved) $("jigunInput").value = saved;
+    } catch (e) { /* 저장 공간 비활성이면 무시 */ }
+    $("jigunInput").addEventListener("input", () => {
+      try { localStorage.setItem(JIGUN_KEY, $("jigunInput").value); } catch (e) { /* ignore */ }
+    });
+    parseJigunInput();
 
     now = new Date(2026, 11, 1);
     now = (function () {
