@@ -848,8 +848,15 @@ window.addEventListener("unhandledrejection", (e) => {
       try { localStorage.setItem(RULES_KEY, $("rulesInput").value); } catch (e) { /* ignore */ }
     });
 
-    // 기본: 2026-11-15(일) 기준 → 11월
-    now = new Date(2026, 10, 15);
+    now = new Date(2026, 11, 1);
+    now = (function () {
+      var t = new Date();
+      var lastDay = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate();
+      if (t.getDate() === lastDay) {
+        return new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      }
+      return now;
+    })();
     $("startDate").value = isoDate(now);
     $("startDate").addEventListener("change", (e) => {
       if (e.target.value) { now = new Date(e.target.value + "T00:00:00"); safeGenerate(); }
