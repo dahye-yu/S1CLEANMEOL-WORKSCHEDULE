@@ -144,9 +144,7 @@ function singleOwner(saturdayDate) {
   return pool[mod(weeks, pool.length)];
 }
 
-// ================================================================
 //  월 단위 자동 생성
-// ================================================================
 function generateMonth() {
   if (staff.length === 0) throw new Error("직원 명단이 비어 있습니다.");
   holidays = parseHolidays($("holidayInput") ? $("holidayInput").value : "");
@@ -362,12 +360,10 @@ function generateMonth() {
   const blockCount = {};
   staff.forEach((n) => { blockCount[n] = countBlocks(shifts[n]); });
 
-  // ================================================================
   //  균형화 헬퍼 (당번 제외 DAY/SW/GY 합계 목표: 가능한 한 6~10)
   //   - 10 초과 인원의 SW·DAY를 낮은 인원에게 양도 (최대치 축소)
   //   - 가장 적게 근무한 인원을 우선 채워 낮은 값(→~6)을 끌어올림
   //   - 1일 1명 원칙을 지키며 같은 날짜 안에서 SW/DAY 소유권만 스왑
-  // ================================================================
   function balanceRotation(shifts, dates, info, byName) {
     const rotCount = (name) => {
       let c = 0;
@@ -494,9 +490,7 @@ function countBlocks(row) {
   return cnt;
 }
 
-// ================================================================
 //  렌더링 (월 단위)
-// ================================================================
 let lastResult = null;
 
 function render() {
@@ -644,9 +638,7 @@ function renderSummary(counts, res) {
   note.textContent = distText;
 }
 
-// ================================================================
 //  데이터 불러오기 (붙여넣기) — 기존 기능 유지
-// ================================================================
 function parseImportedTable(text) {
   const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "");
   if (lines.length < 2) throw new Error("붙여넣은 데이터가 형식에 맞지 않습니다.");
@@ -881,6 +873,7 @@ const ACCESS_PASSWORD = "MEOL123!";
     if (input.value === ACCESS_PASSWORD) {
       unlocked = true;
       overlay.remove();                      // 잠금 화면 제거 (앱은 이미 초기화됨)
+      document.body.style.overflow = "";     // 스크롤 잠금 해제
     } else {
       if (msg) msg.hidden = false;
       input.value = "";
@@ -890,6 +883,6 @@ const ACCESS_PASSWORD = "MEOL123!";
   btn.addEventListener("click", attempt);
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") attempt(); });
   input.focus();
-  // 잠금 상태에서 스크롤 방지(선택)
+  // 잠금 상태에서만 스크롤 방지 (해제 시 위에서 overflow 초기화)
   document.body.style.overflow = "hidden";
 })();
