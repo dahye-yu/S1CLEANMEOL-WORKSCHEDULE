@@ -264,6 +264,20 @@ forcedRoleSet.add(it.di + ":" + r.role);
 }
 });
 
+// 6일 GY 블록(일~금) 종료 후에는 다음 주말(토·일) 2일 휴무 보장 (개별근무제약 지정/휴무 등이 있으면 우선)
+blockGyPeople.forEach((nm) => {
+for (let di = 0; di < dates.length - 1; di++) {
+if (shifts[nm][di] !== "GY" || info[di].gt !== "block") continue;
+if (di + 1 < dates.length && shifts[nm][di + 1] === "GY" && info[di + 1].gt === "block") continue;
+for (const offDi of [di + 1, di + 2]) {
+if (offDi >= dates.length) break;
+if (shifts[nm][offDi] != null) continue;
+if (offCode(nm, dates[offDi])) continue;
+shifts[nm][offDi] = OFF_DAY;
+}
+}
+});
+
 const groups = new Map();
 info.forEach((it) => {
 if (!it.weekendLike) return;
