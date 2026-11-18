@@ -58,11 +58,20 @@ function parseHolidays(text) {
 function parsePersonRules(text) {
   const rules = [];
   (text || "").split(/\n/).map((l) => l.trim()).filter(Boolean).forEach((line) => {
-    const parts = line.split("|").map((s) => s.trim());
-    if (parts.length < 3) return;
-    const name = parts[0];
-    const targets = parts[1].split(",").map((s) => s.trim()).filter(Boolean);
-    const role = parts[2].trim();
+    let name, targets, role;
+    if (line.includes("|")) {
+      const parts = line.split("|").map((s) => s.trim());
+      if (parts.length < 3) return;
+      name = parts[0];
+      targets = parts[1].split(",").map((s) => s.trim()).filter(Boolean);
+      role = parts[2].trim();
+    } else {
+      const parts = line.split(",").map((s) => s.trim()).filter(Boolean);
+      if (parts.length < 3) return;
+      name = parts[0];
+      role = parts[parts.length - 1];
+      targets = parts.slice(1, parts.length - 1);
+    }
     if (name && targets.length && role) rules.push({ name, targets, role });
   });
   return rules;
@@ -802,27 +811,31 @@ window.addEventListener("unhandledrejection", (e) => {
     ].join("\n");
 
     $("rulesInput").value = [
-      "정의정 | 화,목 | SW",
-      "서지현 | 3토 | SW",
+      "정의정,화,목,SW",
+      "서지현,3토,SW",
     ].join("\n");
 
     const RULES_KEY = "schedule_personRules";
     try {
       const saved = localStorage.getItem(RULES_KEY);
-      if (saved) $("rulesInput").value = saved;
-    } catch (e) { /* 저장 공간 비활성(시크릿 등)이면 무시 */ }
-    $("rulesInput").addEventListener("input", () => {
-      try { localStorage.setItem(RULES_KEY, $("rulesInput").value); } catch (e) { /* ignore */ }
-    });
+      if (saved !== null) $("rulesInput").value = saved;
+    } catch (e) { /* 무시 */ }
+    const saveRules = () => { try { localStorage.setItem(RULES_KEY, $("rulesInput").value); } catch (e) { /* ignore */ } };
+    $("rulesInput").addEventListener("input", saveRules);
+    $("rulesInput").addEventListener("change", saveRules);
+    $("rulesInput").addEventListener("blur", saveRules);
 
-    const JIGUN_KEY = "schedule_jigunUsers";
-    try {
-      const saved = localStorage.getItem(JIGUN_KEY);
-      if (saved) $("jigunInput").value = saved;
-    } catch (e) { /* 저장 공간 비활성이면 무시 */ }
-    $("jigunInput").addEventListener("input", () => {
-      try { localStorage.setItem(JIGUN_KEY, $("jigunInput").value); } catch (e) { /* ignore */ }
-    });
+    if ($("jigunInput")) {
+      const JIGUN_KEY = "schedule_jigunUsers";
+      try {
+        const savedJ = localStorage.getItem(JIGUN_KEY);
+        if (savedJ !== null) $("jigunInput").value = savedJ;
+      } catch (e) { /* 무시 */ }
+      const saveJigun = () => { try { localStorage.setItem(JIGUN_KEY, $("jigunInput").value); } catch (e) { /* ignore */ } };
+      $("jigunInput").addEventListener("input", saveJigun);
+      $("jigunInput").addEventListener("change", saveJigun);
+      $("jigunInput").addEventListener("blur", saveJigun);
+    }
     parseJigunInput();
 
     now = new Date(2026, 11, 1);
