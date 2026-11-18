@@ -63,12 +63,19 @@ function normRole(r) {
   if (r === "당번") return "당번";
   return r;
 }
-function parseAssignRole(role) {
+function classifyRole(role) {
   const s = String(role).trim();
-  const m = s.match(/^지정\s*:?\s*(SW|DAY|GY|당번)$/i)
+  let m = s.match(/^지정\s*:?\s*(SW|DAY|GY|당번)$/i)
     || s.match(/^(SW|DAY|GY|당번)\s*지정$/i)
     || s.match(/^[=!@]\s*(SW|DAY|GY|당번)$/i);
-  return m ? normRole(m[1]) : null;
+  if (m) return { role: normRole(m[1]), assign: true };
+  const up = s.toUpperCase();
+  if (up === "SW" || up === "DAY") return { role: up, assign: true };
+  m = s.match(/^제외\s*:?\s*(SW|DAY)$/i)
+    || s.match(/^x\s*(SW|DAY)$/i)
+    || s.match(/^[~\-]\s*(SW|DAY)$/i);
+  if (m) return { role: m[1].toUpperCase(), assign: false };
+  return { role: s, assign: false };
 }
 function parsePersonRules(text) {
   const rules = [];
@@ -88,9 +95,8 @@ function parsePersonRules(text) {
       targets = parts.slice(1, parts.length - 1);
     }
     if (!(name && targets.length && role)) return;
-    const assignBase = parseAssignRole(role);
-    if (assignBase) rules.push({ name, targets, role: assignBase, assign: true });
-    else rules.push({ name, targets, role });
+    const cls = classifyRole(role);
+    rules.push({ name, targets, role: cls.role, assign: cls.assign });
   });
   return rules;
 }
@@ -851,8 +857,8 @@ window.addEventListener("unhandledrejection", (e) => {
     ].join("\n");
 
     $("rulesInput").value = [
-      "정의정,화,목,SW",
-      "서지현,3토,SW",
+      "정의정,화,목,제외SW",
+      "서지현,3토,제외SW",
     ].join("\n");
 
     const RULES_KEY = "schedule_personRules";
