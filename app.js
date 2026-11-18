@@ -21,6 +21,7 @@ const SINGLE_GY_ORDER = ["서지현", "남재현", "김예빈", "조이준", "�
 
 const WORK_OFFICE = "OFFICE";
 const OFF_DAY = "휴무";
+const GY_REST = "GY휴"; // 6일 GY 블록 종료 후 보장 휴무(내부 표식, 화면엔 '휴무'로 표시/재배정 불가)
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const WEEKDAY_INDEX = { 일: 0, 월: 1, 화: 2, 수: 3, 목: 4, 금: 5, 토: 6 };
 
@@ -273,7 +274,7 @@ for (const offDi of [di + 1, di + 2]) {
 if (offDi >= dates.length) break;
 if (shifts[nm][offDi] != null) continue;
 if (offCode(nm, dates[offDi])) continue;
-shifts[nm][offDi] = OFF_DAY;
+shifts[nm][offDi] = GY_REST;
 }
 }
 });
@@ -530,7 +531,7 @@ return { dates, info, shifts, people, blockCount, year, month, blockGyPeople };
 function countBlocks(row) {
 let cnt = 0, run = 0;
 for (let i = 0; i < row.length; i++) {
-if (row[i] === OFF_DAY || row[i] === "연차" || row[i] === "F/D" || row[i] === "지휴") { run++; }
+if (row[i] === OFF_DAY || row[i] === GY_REST || row[i] === "연차" || row[i] === "F/D" || row[i] === "지휴") { run++; }
 else { if (run >= 2) cnt++; run = 0; }
 }
 if (run >= 2) cnt++;
@@ -583,6 +584,7 @@ if (label === "DAY" || label === "SW" || label === "GY") return label;
 return (label === "지D" || label === "특D") ? "DAY" : (label === "지S" || label === "특S") ? "SW" : (label === "지G" || label === "특G") ? "GY" : null;
 }
 function displayShift(name, code, di, info) {
+if (code === GY_REST) return OFF_DAY;
 if ((code === "DAY" || code === "SW" || code === "GY") && info[di].weekendLike) {
 return (jigunUsers.has(name) ? "지" : "특") + { "DAY": "D", "SW": "S", "GY": "G" }[code];
 }
