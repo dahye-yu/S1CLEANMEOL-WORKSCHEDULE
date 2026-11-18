@@ -55,6 +55,21 @@ function parseHolidays(text) {
   });
   return set;
 }
+function normRole(r) {
+  const u = String(r).toUpperCase();
+  if (u === "SW") return "SW";
+  if (u === "DAY") return "DAY";
+  if (u === "GY") return "GY";
+  if (r === "당번") return "당번";
+  return r;
+}
+function parseAssignRole(role) {
+  const s = String(role).trim();
+  const m = s.match(/^지정\s*:?\s*(SW|DAY|GY|당번)$/i)
+    || s.match(/^(SW|DAY|GY|당번)\s*지정$/i)
+    || s.match(/^[=!@]\s*(SW|DAY|GY|당번)$/i);
+  return m ? normRole(m[1]) : null;
+}
 function parsePersonRules(text) {
   const rules = [];
   (text || "").split(/\n/).map((l) => l.trim()).filter(Boolean).forEach((line) => {
@@ -72,7 +87,10 @@ function parsePersonRules(text) {
       role = parts[parts.length - 1];
       targets = parts.slice(1, parts.length - 1);
     }
-    if (name && targets.length && role) rules.push({ name, targets, role });
+    if (!(name && targets.length && role)) return;
+    const assignBase = parseAssignRole(role);
+    if (assignBase) rules.push({ name, targets, role: assignBase, assign: true });
+    else rules.push({ name, targets, role });
   });
   return rules;
 }
@@ -109,6 +127,7 @@ function matchTarget(tok, date) {
 function isBlocked(name, role, date) {
   for (const r of personRules) {
     if (r.name !== name) continue;
+    if (r.assign) continue;
     if (r.role !== "*" && r.role !== role) continue;
     for (const t of r.targets) if (matchTarget(t, date)) return true;
   }
@@ -117,6 +136,7 @@ function isBlocked(name, role, date) {
 function offCode(name, date) {
   for (const r of personRules) {
     if (r.name !== name) continue;
+    if (r.assign) continue;
     if (r.role === "지휴") {
       for (const t of r.targets) {
         if (matchTarget(t, date)) return "지휴";
@@ -225,6 +245,19 @@ function generateMonth() {
     }
   });
 
+  const forcedRoleSet = new Set();
+  info.forEach((it) => {
+    for (const r of personRules) {
+      if (!r.assign || !staff.includes(r.name)) continue;
+      if (!r.targets.some((t) => matchTarget(t, it.date))) continue;
+      if (shifts[r.name][it.di] != null) continue;
+      if (staff.some((n) => shifts[n][it.di] === r.role)) continue;
+      if (offCode(r.name, it.date)) continue;
+      place(r.name, r.role, it.di);
+      forcedRoleSet.add(it.di + ":" + r.role);
+    }
+  });
+
   const groups = new Map();
   info.forEach((it) => {
     if (!it.weekendLike) return;
@@ -266,12 +299,14 @@ function generateMonth() {
     const full = members.length === 2;
     const used = new Set();
     members.forEach((it) => { if (it.gy && shifts[it.gy][it.di] === "GY") used.add(it.gy); });
+    members.forEach((it) => { staff.forEach((n) => { if (shifts[n][it.di] != null) used.add(n); }); });
 
     for (const it of members) {
       const roles = [];
       if (it.needsGy) roles.push("GY");
       roles.push("SW", "DAY");
       for (const role of roles) {
+        if (staff.some((n) => shifts[n][it.di] === role)) continue;
         const noSwNext = role === "DAY" ? (n) => !hadSwPrev(n, it.di) : () => true;
         let pool = role === "GY" ? gyPool : role === "SW" ? swPool : dayPool;
         let cand = pool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, role, it.date) && !offCode(n, it.date) && noSwNext(n) && !(role === "SW" && isSwBanned(n)) && !isFdExcluded(n, it));
@@ -307,7 +342,9 @@ function generateMonth() {
     } else if (it.gy) {
       used.add(it.gy);
     }
+    staff.forEach((n) => { if (shifts[n][it.di] != null) used.add(n); });
     for (const role of ["당번", "SW"]) {
+      if (staff.some((n) => shifts[n][it.di] === role)) continue;
       const noSwNext = role === "당번" ? (n) => !hadSwPrev(n, it.di) : () => true;
       let cand = wdPool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, role, it.date) && !offCode(n, it.date) && noSwNext(n) && !(role === "SW" && isSwBanned(n)));
       if (cand.length === 0) cand = dayPool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, role, it.date) && !offCode(n, it.date) && !(role === "SW" && isSwBanned(n)));
@@ -360,6 +397,7 @@ function generateMonth() {
       moved = false;
       for (let di = 0; di < dates.length && !moved; di++) {
         for (const role of ["SW", "DAY"]) {
+          if (forcedRoleSet.has(di + ":" + role)) continue; // 강제 지정 슬롯 보호
           if (role === "DAY" && !info[di].weekendLike) continue; // DAY는 주말·공휴일에만
           const owner = holder(di, role);
           if (!owner) continue;
@@ -409,6 +447,7 @@ function generateMonth() {
           let mv = null;
           for (let di = 0; di < dates.length && !mv; di++) {
             for (const role of ["SW", "DAY"]) {
+              if (forcedRoleSet.has(di + ":" + role)) continue; // 강제 지정 슬롯 보호
               if (shifts[p][di] !== role) continue;
               if (role === "DAY" && !info[di].weekendLike) continue;
               const recv = shiftStaff.filter((n) => n !== p && canTake(n, di, role));
@@ -425,6 +464,7 @@ function generateMonth() {
             if (!(shifts[p][di] === WORK_OFFICE || shifts[p][di] === OFF_DAY)) continue;
             const opts = [];
             for (const role of ["SW", "DAY"]) {
+              if (forcedRoleSet.has(di + ":" + role)) continue; // 강제 지정 슬롯 보호
               if (role === "DAY" && !info[di].weekendLike) continue;
               if (!canTake(p, di, role)) continue;
               const owner = holder(di, role);
