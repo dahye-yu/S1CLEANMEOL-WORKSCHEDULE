@@ -292,6 +292,8 @@ const secPenalty = (n, di) => (Math.abs(di - byName[n].lastShift) === 1 ? 1 : 0)
 
 const hadSwPrev = (n, di) => di > 0 && shifts[n][di - 1] === "SW";
 
+const restAfterPrevGy = (n, di) => di > 0 && shifts[n][di - 1] === "GY";
+
 const weekdaySwInWeek = (n, di) => {
 const t0 = sod(dates[di]).getTime();
 const mon = t0 - ((dates[di].getDay() + 6) % 7) * 86400000;
@@ -328,9 +330,9 @@ for (const role of roles) {
 if (staff.some((n) => shifts[n][it.di] === role)) continue;
 const noSwNext = role === "DAY" ? (n) => !hadSwPrev(n, it.di) : () => true;
 let pool = role === "GY" ? gyPool : role === "SW" ? swPool : dayPool;
-let cand = pool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, role, it.date) && !offCode(n, it.date) && noSwNext(n) && !(role === "SW" && isSwBanned(n)) && !isFdExcluded(n, it));
+let cand = pool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, role, it.date) && !offCode(n, it.date) && noSwNext(n) && !(role === "SW" && isSwBanned(n)) && !isFdExcluded(n, it) && (role === "GY" || !restAfterPrevGy(n, it.di)));
 if (cand.length === 0) {
-cand = dayPool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, role, it.date) && !offCode(n, it.date) && !(role === "SW" && isSwBanned(n)) && !isFdExcluded(n, it));
+cand = dayPool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, role, it.date) && !offCode(n, it.date) && !(role === "SW" && isSwBanned(n)) && !isFdExcluded(n, it) && (role === "GY" || !restAfterPrevGy(n, it.di)));
 }
 if (cand.length === 0) continue;
 const isFriSW = role === "SW" && it.date.getDay() === 5;
@@ -365,9 +367,9 @@ staff.forEach((n) => { if (shifts[n][it.di] != null) used.add(n); });
 for (const role of ["당번", "SW"]) {
 if (staff.some((n) => shifts[n][it.di] === role)) continue;
 const noSwNext = role === "당번" ? (n) => !hadSwPrev(n, it.di) : () => true;
-let cand = wdPool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, role, it.date) && !offCode(n, it.date) && noSwNext(n) && !(role === "SW" && isSwBanned(n)) && !(role === "SW" && !swWeekOk(n, it.di)));
-if (cand.length === 0) cand = dayPool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, role, it.date) && !offCode(n, it.date) && !(role === "SW" && isSwBanned(n)) && !(role === "SW" && !swWeekOk(n, it.di)));
-if (cand.length === 0 && role === "SW") cand = dayPool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, role, it.date) && !offCode(n, it.date) && !(role === "SW" && isSwBanned(n)));
+let cand = wdPool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, role, it.date) && !offCode(n, it.date) && noSwNext(n) && !(role === "SW" && isSwBanned(n)) && !restAfterPrevGy(n, it.di) && !(role === "SW" && !swWeekOk(n, it.di)));
+if (cand.length === 0) cand = dayPool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, role, it.date) && !offCode(n, it.date) && !(role === "SW" && isSwBanned(n)) && !restAfterPrevGy(n, it.di) && !(role === "SW" && !swWeekOk(n, it.di)));
+if (cand.length === 0 && role === "SW") cand = dayPool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, role, it.date) && !offCode(n, it.date) && !(role === "SW" && isSwBanned(n)) && !restAfterPrevGy(n, it.di)); // 배정 공백 방지 위해 주간 제한 완화(GY 휴식은 유지)
 if (cand.length === 0) continue;
 const isFriSW = role === "SW" && it.date.getDay() === 5;
 cand.sort((a, b) => isFriSW
@@ -385,6 +387,7 @@ for (let di = 0; di < dates.length; di++) {
 if (shifts[n][di] === null) {
 const oc = offCode(n, dates[di]);
 if (oc) shifts[n][di] = oc;
+else if (restAfterPrevGy(n, di)) shifts[n][di] = OFF_DAY;      // GY 다음날은 무조건 휴무
 else if (info[di].familyDay) shifts[n][di] = "F/D";           // 패밀리데이: 휴무 대신 F/D
 else shifts[n][di] = info[di].weekendLike ? OFF_DAY : WORK_OFFICE;
 }
@@ -430,6 +433,7 @@ n !== owner
 && !offCode(n, dates[di])
 && !isFdExcluded(n, info[di])
 && !(role === "SW" && isSwBanned(n)) // SW 제외 인원에게 SW 양도 금지
+&& (role === "GY" || !restAfterPrevGy(n, di)) // GY 다음날 근무 금지(연속 GY 예외)
 && !(role === "SW" && !info[di].weekendLike && !swWeekOk(n, di)) // 평일 SW 주간 2회 제한
 && (role !== "DAY" || !(di > 0 && shifts[n][di - 1] === "SW")) // DAY를 받아도 전날 SW면 금지
 && (role !== "SW" || !(di + 1 < dates.length && (shifts[n][di + 1] === "DAY" || shifts[n][di + 1] === "당번"))) // SW 다음날 DAY/당번 금지
@@ -452,6 +456,7 @@ if (!(shifts[n][di] === WORK_OFFICE || shifts[n][di] === OFF_DAY)) return false;
 if (isBlocked(n, role, dates[di])) return false;
 if (offCode(n, dates[di])) return false;
 if (role === "SW" && isSwBanned(n)) return false;
+if (role !== "GY" && restAfterPrevGy(n, di)) return false; // GY 다음날 근무 금지(연속 GY 예외)
 if (role === "SW" && !info[di].weekendLike && !swWeekOk(n, di)) return false; // 평일 SW 주간 2회 제한
 if (role === "DAY" && di > 0 && shifts[n][di - 1] === "SW") return false;
 if (role === "SW" && di + 1 < dates.length && (shifts[n][di + 1] === "DAY" || shifts[n][di + 1] === "당번")) return false;
