@@ -193,8 +193,13 @@ td.shift-name { font-weight: 600; white-space: nowrap; }
   border-radius: 999px;
 }
 .col-emph textarea { border-color: #b9d3ee; background: #fff; }
-.col-emph .btn-row { margin-top: 14px; }
-.col-emph .gen-btn .btn { width: 100%; }
+.col-emph .gen-bar { margin-top: 14px; }
+
+/* 시작 날짜 + 생성 버튼을 나란히 배치 */
+.gen-bar { display: flex; align-items: center; gap: 12px; }
+.gen-bar .gen-start { display: flex; align-items: center; gap: 8px; font-weight: 600; white-space: nowrap; }
+.gen-bar input[type=date] { flex: 1; min-width: 140px; }
+.gen-bar .btn { flex: 1; max-width: 260px; }
 
 /* 개별근무제약 안에서 개별제약 · 지정근무/지휴를 나란히 배치(오·열 정렬) */
 .emph-cols { display: flex; gap: 24px; align-items: stretch; margin-top: 2px; }
