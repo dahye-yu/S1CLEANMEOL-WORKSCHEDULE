@@ -82,6 +82,12 @@
           </ul>
         </div>
         <div class="row-field">
+          <label>패밀리데이 강제 지정 (급여 주 금요일)</label>
+          <textarea id="fdInput" rows="5"
+            placeholder="SHIFT패밀리데이 / 패밀리데이&#10;2026-08-07 / 2026-08-21&#10;2026-09-11 / 2026-09-18&#10;2026-10-02 / 2026-10-23&#10;2026-11-06 / 2026-11-20&#10;2026-12-11 / 2026-12-18"></textarea>
+          <p class="hint">한 줄에 <b>SHIFT 패밀리데이 / 패밀리데이</b> 순서로 날짜 입력. 입력한 달은 기존 자동 규칙 대신 그 날짜로 지정됩니다.<br>비워두면 기본(21일 속한 주 금요일 / 그 2주 전 금요일) 규칙 적용.</p>
+        </div>
+        <div class="row-field">
           <label>시작 날짜</label>
           <input type="date" id="startDate">
         </div>
