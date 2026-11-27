@@ -1,6 +1,6 @@
 let staff = [];
 let now = new Date();
-let mode = "generate";     // generate | import
+let mode = "generate";     
 let importData = null;
 let jigunUsers = new Set();
 
@@ -21,7 +21,7 @@ const SINGLE_GY_ORDER = ["서지현", "남재현", "김예빈", "조이준", "�
 
 const WORK_OFFICE = "OFFICE";
 const OFF_DAY = "휴무";
-const GY_REST = "GY휴"; // 6일 GY 블록 종료 후 보장 휴무(내부 표식, 화면엔 '휴무'로 표시/재배정 불가)
+const GY_REST = "GY휴"; 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const WEEKDAY_INDEX = { 일: 0, 월: 1, 화: 2, 수: 3, 목: 4, 금: 5, 토: 6 };
 
@@ -162,6 +162,20 @@ return weekendLike ? "휴무" : "연차";
 return null;
 }
 
+
+function parseForcedFd(text) {
+const out = [];
+(text || "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean).forEach((line) => {
+const parts = line.split(/[\s/]+/).filter(Boolean);
+if (parts.length < 2) return;
+const mk = (t) => { const m = String(t).match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
+const sfd = mk(parts[0]), fd = mk(parts[1]);
+if (!sfd || !fd) return;
+out.push({ sfd, fd });
+});
+return out;
+}
+
 function blockOwner(sundayDate) {
 const weeks = Math.round(daysBetween(GY_BLOCK_ANCHOR, sundayDate) / 7);
 const pool = GY_BLOCK_ORDER.filter((n) => staff.includes(n));
@@ -185,7 +199,7 @@ const last = new Date(year, month + 1, 0).getDate();
 const dates = [];
 for (let dd = 1; dd <= last; dd++) dates.push(new Date(year, month, dd));
 
-const familyDay = (() => {
+const autoFamilyDay = (() => {
 const d21 = new Date(year, month, 21);
 const monday = new Date(d21);
 monday.setDate(d21.getDate() - ((d21.getDay() + 6) % 7));
@@ -201,6 +215,14 @@ guard++;
 }
 return friday;
 })();
+
+
+const forcedPairs = parseForcedFd($("fdInput") ? $("fdInput").value : "");
+const forcedFp = forcedPairs.find((p) =>
+(p.fd && p.fd.getFullYear() === year && p.fd.getMonth() === month) ||
+(p.sfd && p.sfd.getFullYear() === year && p.sfd.getMonth() === month));
+
+const familyDay = forcedFp ? forcedFp.fd : autoFamilyDay;
 const familyDayKey = isoDate(familyDay);
 
 const people = staff.map((name) => ({
@@ -226,12 +248,12 @@ dates.forEach((date, di) => {
 const dow = date.getDay();
 const weekend = dow === 0 || dow === 6;
 const hol = holidays.has(isoDate(date));
-const fd = isoDate(date) === familyDayKey;               // 패밀리데이(월급일 주의 금요일)
+const fd = isoDate(date) === familyDayKey;               
 const weekendLike = weekend || hol || fd;
 let gy = null, gt = null;
-if (dow === 0) { gy = blockOwner(date); gt = "block"; }                       // 일요일
-else if (dow === 6) { gy = singleOwner(date); gt = "single"; }                // 토요일
-else {                                                                        // 월~금: 평일 GY(공휴일 포함, 담당 블록이 이어짐)
+if (dow === 0) { gy = blockOwner(date); gt = "block"; }                       
+else if (dow === 6) { gy = singleOwner(date); gt = "single"; }                
+else {                                                                        
 const sun = new Date(date); sun.setDate(date.getDate() - dow);
 gy = blockOwner(sun); gt = "block";
 }
@@ -246,7 +268,7 @@ info.forEach((it) => {
 if (it.gy && !offCode(it.gy, it.date)) {
 place(it.gy, "GY", it.di);
 if (it.dow === 6) singleGyThismonth.add(it.gy);
-else if (it.gt === "block") blockGyPeople.add(it.gy); // 일~금 연속 GY 블록 담당자
+else if (it.gt === "block") blockGyPeople.add(it.gy); 
 } else {
 it.needsGy = true;
 }
@@ -265,7 +287,7 @@ forcedRoleSet.add(it.di + ":" + r.role);
 }
 });
 
-// 6일 GY 블록(일~금) 종료 후에는 다음 주말(토·일) 2일 휴무 보장 (개별근무제약 지정/휴무 등이 있으면 우선)
+
 blockGyPeople.forEach((nm) => {
 for (let di = 0; di < dates.length - 1; di++) {
 if (shifts[nm][di] !== "GY" || info[di].gt !== "block") continue;
@@ -384,7 +406,7 @@ if (staff.some((n) => shifts[n][it.di] === role)) continue;
 const noSwNext = role === "당번" ? (n) => !hadSwPrev(n, it.di) : () => true;
 let cand = wdPool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, role, it.date) && !offCode(n, it.date) && noSwNext(n) && !(role === "SW" && isSwBanned(n)) && !restAfterPrevGy(n, it.di) && !(role === "SW" && !swWeekOk(n, it.di)));
 if (cand.length === 0) cand = dayPool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, role, it.date) && !offCode(n, it.date) && !(role === "SW" && isSwBanned(n)) && !restAfterPrevGy(n, it.di) && !(role === "SW" && !swWeekOk(n, it.di)));
-if (cand.length === 0 && role === "SW") cand = dayPool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, role, it.date) && !offCode(n, it.date) && !(role === "SW" && isSwBanned(n)) && !restAfterPrevGy(n, it.di)); // 배정 공백 방지 위해 주간 제한 완화(GY 휴식은 유지)
+if (cand.length === 0 && role === "SW") cand = dayPool.filter((n) => !used.has(n) && !byName[n].leader && !isBlocked(n, role, it.date) && !offCode(n, it.date) && !(role === "SW" && isSwBanned(n)) && !restAfterPrevGy(n, it.di)); 
 if (cand.length === 0) continue;
 const isFriSW = role === "SW" && it.date.getDay() === 5;
 cand.sort((a, b) => isFriSW
@@ -402,16 +424,16 @@ for (let di = 0; di < dates.length; di++) {
 if (shifts[n][di] === null) {
 const oc = offCode(n, dates[di]);
 if (oc) shifts[n][di] = oc;
-else if (restAfterPrevGy(n, di)) shifts[n][di] = OFF_DAY;      // GY 다음날은 무조건 휴무
-else if (info[di].familyDay) shifts[n][di] = "F/D";           // 패밀리데이: 휴무 대신 F/D
+else if (restAfterPrevGy(n, di)) shifts[n][di] = OFF_DAY;      
+else if (info[di].familyDay) shifts[n][di] = "F/D";           
 else shifts[n][di] = info[di].weekendLike ? OFF_DAY : WORK_OFFICE;
 }
 }
 });
 
-// SHIFT 패밀리데이: 패밀리데이(F0, 급여 주 금요일) 당일 교대(DAY/SW/GY) 근무자 → 2주 전 금요일(F0-14일)을 F/D로 사용 확대
+
 const fdDi = dates.findIndex((d) => isoDate(d) === familyDayKey);
-const shiftFd = new Date(familyDay); shiftFd.setDate(familyDay.getDate() - 14);
+const shiftFd = (forcedFp && forcedFp.sfd) ? new Date(forcedFp.sfd) : (() => { const t = new Date(familyDay); t.setDate(t.getDate() - 14); return t; })();
 const shiftFdDi = dates.findIndex((d) => isoDate(d) === isoDate(shiftFd));
 if (fdDi >= 0 && shiftFdDi >= 0) {
 staff.forEach((nm) => {
@@ -434,7 +456,7 @@ for (const r of ["DAY", "SW", "GY"]) c += byName[name].roleCount[r] || 0;
 return c;
 };
 const target = (name) => (blockGyPeople.has(name) ? 10 : 6);
-const dev = (name) => rotCount(name) - target(name); // 양수=목표 초과, 음수=미달
+const dev = (name) => rotCount(name) - target(name); 
 const holder = (di, role) => staff.find((n) => shifts[n][di] === role);
 const apply = (di, role, owner, cand) => {
 shifts[cand][di] = role;
@@ -448,8 +470,8 @@ while (moved) {
 moved = false;
 for (let di = 0; di < dates.length && !moved; di++) {
 for (const role of ["SW", "DAY"]) {
-if (forcedRoleSet.has(di + ":" + role)) continue; // 강제 지정 슬롯 보호
-if (role === "DAY" && !info[di].weekendLike) continue; // DAY는 주말·공휴일에만
+if (forcedRoleSet.has(di + ":" + role)) continue; 
+if (role === "DAY" && !info[di].weekendLike) continue; 
 const owner = holder(di, role);
 if (!owner) continue;
 if (LEADERS.includes(owner)) continue;
@@ -460,15 +482,15 @@ n !== owner
 && !isBlocked(n, role, dates[di])
 && !offCode(n, dates[di])
 && !isFdExcluded(n, info[di])
-&& !(role === "SW" && isSwBanned(n)) // SW 제외 인원에게 SW 양도 금지
-&& (role === "GY" || !restAfterPrevGy(n, di)) // GY 다음날 근무 금지(연속 GY 예외)
-&& !(role === "SW" && !info[di].weekendLike && !swWeekOk(n, di)) // 평일 SW 주간 2회 제한
-&& (role !== "DAY" || !(di > 0 && shifts[n][di - 1] === "SW")) // DAY를 받아도 전날 SW면 금지
-&& (role !== "SW" || !(di + 1 < dates.length && (shifts[n][di + 1] === "DAY" || shifts[n][di + 1] === "당번"))) // SW 다음날 DAY/당번 금지
+&& !(role === "SW" && isSwBanned(n)) 
+&& (role === "GY" || !restAfterPrevGy(n, di)) 
+&& !(role === "SW" && !info[di].weekendLike && !swWeekOk(n, di)) 
+&& (role !== "DAY" || !(di > 0 && shifts[n][di - 1] === "SW")) 
+&& (role !== "SW" || !(di + 1 < dates.length && (shifts[n][di + 1] === "DAY" || shifts[n][di + 1] === "당번"))) 
 );
 if (!candidates.length) continue;
 const best = candidates.slice().sort((a, b) => dev(a) - dev(b))[0];
-if (dev(owner) - dev(best) >= 2) { // 양도 후 목표 편차 합이 줄어드는 경우만
+if (dev(owner) - dev(best) >= 2) { 
 apply(di, role, owner, best);
 moved = true;
 break;
@@ -484,8 +506,8 @@ if (!(shifts[n][di] === WORK_OFFICE || shifts[n][di] === OFF_DAY)) return false;
 if (isBlocked(n, role, dates[di])) return false;
 if (offCode(n, dates[di])) return false;
 if (role === "SW" && isSwBanned(n)) return false;
-if (role !== "GY" && restAfterPrevGy(n, di)) return false; // GY 다음날 근무 금지(연속 GY 예외)
-if (role === "SW" && !info[di].weekendLike && !swWeekOk(n, di)) return false; // 평일 SW 주간 2회 제한
+if (role !== "GY" && restAfterPrevGy(n, di)) return false; 
+if (role === "SW" && !info[di].weekendLike && !swWeekOk(n, di)) return false; 
 if (role === "DAY" && di > 0 && shifts[n][di - 1] === "SW") return false;
 if (role === "SW" && di + 1 < dates.length && (shifts[n][di + 1] === "DAY" || shifts[n][di + 1] === "당번")) return false;
 return true;
@@ -502,7 +524,7 @@ if (c > GOAL) {
 let mv = null;
 for (let di = 0; di < dates.length && !mv; di++) {
 for (const role of ["SW", "DAY"]) {
-if (forcedRoleSet.has(di + ":" + role)) continue; // 강제 지정 슬롯 보호
+if (forcedRoleSet.has(di + ":" + role)) continue; 
 if (shifts[p][di] !== role) continue;
 if (role === "DAY" && !info[di].weekendLike) continue;
 const recv = shiftStaff.filter((n) => n !== p && canTake(n, di, role));
@@ -519,22 +541,22 @@ for (let di = 0; di < dates.length && !mv; di++) {
 if (!(shifts[p][di] === WORK_OFFICE || shifts[p][di] === OFF_DAY)) continue;
 const opts = [];
 for (const role of ["SW", "DAY"]) {
-if (forcedRoleSet.has(di + ":" + role)) continue; // 강제 지정 슬롯 보호
+if (forcedRoleSet.has(di + ":" + role)) continue; 
 if (role === "DAY" && !info[di].weekendLike) continue;
 if (!canTake(p, di, role)) continue;
 const owner = holder(di, role);
-if (!owner || owner === p || blockGyPeople.has(owner)) continue; // 비참여자에게서만
+if (!owner || owner === p || blockGyPeople.has(owner)) continue; 
 opts.push({ di, role, owner });
 }
 if (!opts.length) continue;
-opts.sort((a, b) => rotCount(b.owner) - rotCount(a.owner)); // 가장 많이 일한 사람에게서 우선
+opts.sort((a, b) => rotCount(b.owner) - rotCount(a.owner)); 
 mv = opts[0];
 }
 if (mv) { apply(mv.di, mv.role, mv.owner, p); changed = true; }
 }
 }
 if (participants.every((p) => rotCount(p) === GOAL)) break;
-if (!changed) break; // 더 이상 조정 불가
+if (!changed) break; 
 }
 }
 
@@ -915,8 +937,8 @@ const RULES_KEY = "schedule_personRules";
 try {
 const saved = localStorage.getItem(RULES_KEY);
 if (saved !== null) $("rulesInput").value = saved;
-} catch (e) { /* 무시 */ }
-const saveRules = () => { try { localStorage.setItem(RULES_KEY, $("rulesInput").value); } catch (e) { /* ignore */ } };
+} catch (e) {  }
+const saveRules = () => { try { localStorage.setItem(RULES_KEY, $("rulesInput").value); } catch (e) {  } };
 $("rulesInput").addEventListener("input", saveRules);
 $("rulesInput").addEventListener("change", saveRules);
 $("rulesInput").addEventListener("blur", saveRules);
@@ -926,12 +948,33 @@ const JIGUN_KEY = "schedule_jigunUsers";
 try {
 const savedJ = localStorage.getItem(JIGUN_KEY);
 if (savedJ !== null) $("jigunInput").value = savedJ;
-} catch (e) { /* 무시 */ }
-const saveJigun = () => { try { localStorage.setItem(JIGUN_KEY, $("jigunInput").value); } catch (e) { /* ignore */ } };
+} catch (e) {  }
+const saveJigun = () => { try { localStorage.setItem(JIGUN_KEY, $("jigunInput").value); } catch (e) {  } };
 $("jigunInput").addEventListener("input", saveJigun);
 $("jigunInput").addEventListener("change", saveJigun);
 $("jigunInput").addEventListener("blur", saveJigun);
 }
+
+
+if ($("fdInput")) {
+const FD_KEY = "schedule_fdInput";
+$("fdInput").value = [
+"2026-08-07 / 2026-08-21",
+"2026-09-11 / 2026-09-18",
+"2026-10-02 / 2026-10-23",
+"2026-11-06 / 2026-11-20",
+"2026-12-11 / 2026-12-18",
+].join("\n");
+try {
+const savedF = localStorage.getItem(FD_KEY);
+if (savedF !== null) $("fdInput").value = savedF;
+} catch (e) {  }
+const saveFd = () => { try { localStorage.setItem(FD_KEY, $("fdInput").value); } catch (e) {  } };
+$("fdInput").addEventListener("input", saveFd);
+$("fdInput").addEventListener("change", saveFd);
+$("fdInput").addEventListener("blur", saveFd);
+}
+
 parseJigunInput();
 
 now = new Date(2026, 11, 1);
@@ -963,8 +1006,8 @@ let unlocked = false;
 const attempt = () => {
 if (input.value === ACCESS_PASSWORD) {
 unlocked = true;
-overlay.remove();                      // 잠금 화면 제거 (앱은 이미 초기화됨)
-document.body.style.overflow = "";     // 스크롤 잠금 해제
+overlay.remove();                      
+document.body.style.overflow = "";     
 } else {
 if (msg) msg.hidden = false;
 input.value = "";
