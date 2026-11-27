@@ -41,56 +41,66 @@
         <textarea id="staffInput" rows="8"
           placeholder="한 줄에 한 명씩 입력&#10;홍길동&#10;김철수&#10;이영희&#10;박민수"></textarea>
         <p class="hint">고정 인원 15명. <b>김지욱·장효영</b>은 리더로 SHIFT(특수근무) 배정에서 제외됩니다.</p>
+
+        <h2 class="rules-head">근무 규칙</h2>
+        <div class="rules-box rules-grid">
+          <div class="rules-sec">
+            <p><b>평일(월~금)</b></p>
+            <ul>
+              <li>당번 1명 · SW 1명 · GY 1명</li>
+              <li>나머지 OFFICE</li>
+            </ul>
+          </div>
+          <div class="rules-sec">
+            <p><b>주말(토·일)</b></p>
+            <ul>
+              <li>DAY/OFFICE 1명 · SW 1명 · GY 1명</li>
+              <li>나머지 휴무</li>
+            </ul>
+          </div>
+          <div class="rules-sec">
+            <p><b>연속 제약</b></p>
+            <ul>
+              <li>SW 근무자는 다음날 당번·DAY 배정 제외</li>
+              <li>GY 근무자는 다음날 <b>무조건 근무 불가</b> (연속 야간 GY만 예외, 그 다음날은 휴무)</li>
+              <li>6일 GY 블록 종료 후에는 그 다음 토·일 <b>2일 휴무</b> 보장 (개별근무제약에 입력 내용이 있으면 우선)</li>
+              <li>평일 SW: 같은 주(월~금)에 1인당 <b>최대 2회</b>만 배정</li>
+              <li>당번 제외 DAY·SW·GY 합계: 6일 GY 블록 참여자는 <b>무조건 10</b>으로 고정, 그 외 SHIFT원은 6 지향</li>
+            </ul>
+          </div>
+          <div class="rules-sec">
+            <p><b>패밀리데이</b></p>
+            <ul>
+              <li>매월 21일(월급일)이 속한 주의 금요일: DAY·SW·GY만 근무, 나머지는 <b>F/D</b>로 표기</li>
+              <li>SHIFT 패밀리데이: 패밀리데이 당일 교대(DAY·SW·GY) 근무자 → <b>급여 지급일이 속한 2주 전 금요일</b>을 F/D로 사용 확대</li>
+              <li>선정된 금요일이 공휴일이면 <b>직전주 금요일</b>로 선정</li>
+              <li>21일이 월요일이면서 공휴일이면 그 직전 금요일로 선정</li>
+            </ul>
+          </div>
+          <div class="rules-sec">
+            <p><b>인원 제약</b></p>
+            <ul>
+              <li>리더(김지욱·장효영): 전 SHIFT 제외</li>
+              <li>신민지·남재현·유다혜·김유신·박수정: 평일 SHIFT 제외</li>
+              <li>신민지·유다혜·박수정: 주말 DAY/OFFICE만</li>
+              <li>남재현·김유신: 주말 DAY/OFFICE 또는 1일 GY</li>
+              <li><b>신민지·남재현·유다혜·김유신·박수정: SW 전면 제외</b></li>
+              <li>GY: 8명 순환, 1명이 일~금 전담·토 휴무</li>
+            </ul>
+          </div>
+        </div>
       </div>
 
       <div class="col">
-        <h2>근무 규칙</h2>
-        <div class="rules-box">
-          <p><b>평일(월~금)</b></p>
-          <ul>
-            <li>당번 1명 · SW 1명 · GY 1명</li>
-            <li>나머지 OFFICE</li>
-          </ul>
-          <p><b>주말(토·일)</b></p>
-          <ul>
-            <li>DAY/OFFICE 1명 · SW 1명 · GY 1명</li>
-            <li>나머지 휴무</li>
-          </ul>
-          <p><b>연속 제약</b></p>
-          <ul>
-            <li>SW 근무자는 다음날 당번·DAY 배정 제외</li>
-            <li>GY 근무자는 다음날 <b>무조건 근무 불가</b> (연속 야간 GY만 예외, 그 다음날은 휴무)</li>
-            <li>6일 GY 블록 종료 후에는 그 다음 토·일 <b>2일 휴무</b> 보장 (개별근무제약에 입력 내용이 있으면 우선)</li>
-            <li>평일 SW: 같은 주(월~금)에 1인당 <b>최대 2회</b>만 배정</li>
-            <li>당번 제외 DAY·SW·GY 합계: 6일 GY 블록 참여자는 <b>무조건 10</b>으로 고정, 그 외 SHIFT원은 6 지향</li>
-          </ul>
-          <p><b>패밀리데이</b></p>
-          <ul>
-            <li>매월 21일(월급일)이 속한 주의 금요일: DAY·SW·GY만 근무, 나머지는 <b>F/D</b>로 표기</li>
-            <li>SHIFT 패밀리데이: 패밀리데이 당일 교대(DAY·SW·GY) 근무자 → <b>급여 지급일이 속한 2주 전 금요일</b>을 F/D로 사용 확대</li>
-            <li>선정된 금요일이 공휴일이면 <b>직전주 금요일</b>로 선정</li>
-            <li>21일이 월요일이면서 공휴일이면 그 직전 금요일로 선정</li>
-          </ul>
-          <p><b>인원 제약</b></p>
-          <ul>
-            <li>리더(김지욱·장효영): 전 SHIFT 제외</li>
-            <li>신민지·남재현·유다혜·김유신·박수정: 평일 SHIFT 제외</li>
-            <li>신민지·유다혜·박수정: 주말 DAY/OFFICE만</li>
-            <li>남재현·김유신: 주말 DAY/OFFICE 또는 1일 GY</li>
-            <li><b>신민지·남재현·유다혜·김유신·박수정: SW 전면 제외</b></li>
-            <li>GY: 8명 순환, 1명이 일~금 전담·토 휴무</li>
-          </ul>
-        </div>
-        <div class="row-field">
-          <label>패밀리데이 강제 지정 (급여 주 금요일)</label>
-          <textarea id="fdInput" rows="5"
-            placeholder="SHIFT패밀리데이 / 패밀리데이&#10;2026-08-07 / 2026-08-21&#10;2026-09-11 / 2026-09-18&#10;2026-10-02 / 2026-10-23&#10;2026-11-06 / 2026-11-20&#10;2026-12-11 / 2026-12-18"></textarea>
-          <p class="hint">한 줄에 <b>SHIFT 패밀리데이 / 패밀리데이</b> 순서로 날짜 입력. 입력한 달은 기존 자동 규칙 대신 그 날짜로 지정됩니다.<br>비워두면 기본(21일 속한 주 금요일 / 그 2주 전 금요일) 규칙 적용.</p>
-        </div>
+        <h2>시작 · 패밀리데이 강제 지정</h2>
         <div class="row-field">
           <label>시작 날짜</label>
           <input type="date" id="startDate">
         </div>
+        <p class="hint">원하는 달의 패밀리데이를 아래처럼 강제 지정할 수 있습니다.<br>비워두면 위 규칙(21일 속한 주 금요일 / 그 2주 전 금요일)대로 자동 계산됩니다.</p>
+        <textarea id="fdInput" rows="5"
+          placeholder="SHIFT패밀리데이 / 패밀리데이&#10;2026-08-07 / 2026-08-21&#10;2026-09-11 / 2026-09-18&#10;2026-10-02 / 2026-10-23&#10;2026-11-06 / 2026-11-20&#10;2026-12-11 / 2026-12-18"></textarea>
+        <p class="hint">한 줄에 <b>SHIFT 패밀리데이 / 패밀리데이</b> 순서로 날짜 입력. 그 달은 자동 규칙 대신 그 날짜로 지정됩니다.</p>
         <div class="btn-row">
           <button class="btn primary" id="generateBtn">근무표 생성</button>
         </div>
