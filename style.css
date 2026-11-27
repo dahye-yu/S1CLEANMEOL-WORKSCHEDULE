@@ -38,7 +38,7 @@ header p { color: var(--text-dim); font-size: 14px; }
   margin-bottom: 20px;
 }
 
-.setup { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.setup { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px; }
 @media (max-width: 640px) { .setup { grid-template-columns: 1fr; } }
 
 .col h2, .result h2 { font-size: 16px; margin-bottom: 12px; }
