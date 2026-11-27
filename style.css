@@ -196,6 +196,11 @@ td.shift-name { font-weight: 600; white-space: nowrap; }
 .col-emph .btn-row { margin-top: 14px; }
 .col-emph .gen-btn .btn { width: 100%; }
 
+/* 개별근무제약 안에서 개별제약 · 지정근무/지휴를 나란히 배치 */
+.emph-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; margin-top: 2px; }
+.emph-col h3 { margin: 6px 0 4px; font-size: 14px; color: var(--primary); }
+@media (max-width: 640px) { .emph-cols { grid-template-columns: 1fr; } }
+
 /* 아래는 summary */
 #summaryTable th { background: #edf2f7; color: var(--text-dim); font-weight: 600; }
 #summaryTable th, #summaryTable td { border: 1px solid var(--border); padding: 8px; text-align: center; }
