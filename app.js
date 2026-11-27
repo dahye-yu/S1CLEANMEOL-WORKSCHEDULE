@@ -409,6 +409,19 @@ else shifts[n][di] = info[di].weekendLike ? OFF_DAY : WORK_OFFICE;
 }
 });
 
+// SHIFT 패밀리데이: 패밀리데이(F0, 급여 주 금요일) 당일 교대(DAY/SW/GY) 근무자 → 2주 전 금요일(F0-14일)을 F/D로 사용 확대
+const fdDi = dates.findIndex((d) => isoDate(d) === familyDayKey);
+const shiftFd = new Date(familyDay); shiftFd.setDate(familyDay.getDate() - 14);
+const shiftFdDi = dates.findIndex((d) => isoDate(d) === isoDate(shiftFd));
+if (fdDi >= 0 && shiftFdDi >= 0) {
+staff.forEach((nm) => {
+const base = baseRole(displayShift(nm, shifts[nm][fdDi], fdDi, info));
+if (base === "DAY" || base === "SW" || base === "GY") {
+shifts[nm][shiftFdDi] = "F/D";
+}
+});
+}
+
 balanceRotation(shifts, dates, info, byName);
 
 const blockCount = {};
