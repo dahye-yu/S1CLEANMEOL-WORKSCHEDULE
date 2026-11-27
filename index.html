@@ -36,12 +36,7 @@
 
     <!-- 설정 패널 -->
     <section class="panel setup">
-      <div class="col">
-        <h2>직원 명단</h2>
-        <textarea id="staffInput" rows="8"
-          placeholder="한 줄에 한 명씩 입력&#10;홍길동&#10;김철수&#10;이영희&#10;박민수"></textarea>
-        <p class="hint">고정 인원 15명. <b>김지욱·장효영</b>은 리더로 SHIFT(특수근무) 배정에서 제외됩니다.</p>
-
+      <div class="col rules-full">
         <h2 class="rules-head">근무 규칙</h2>
         <div class="rules-box rules-grid">
           <div class="rules-sec">
@@ -92,6 +87,13 @@
       </div>
 
       <div class="col">
+        <h2>직원 명단</h2>
+        <textarea id="staffInput" rows="8"
+          placeholder="한 줄에 한 명씩 입력&#10;홍길동&#10;김철수&#10;이영희&#10;박민수"></textarea>
+        <p class="hint">고정 인원 15명. <b>김지욱·장효영</b>은 리더로 SHIFT(특수근무) 배정에서 제외됩니다.</p>
+      </div>
+
+      <div class="col">
         <h2>시작 · 패밀리데이 강제 지정</h2>
         <div class="row-field">
           <label>시작 날짜</label>
@@ -111,8 +113,8 @@
         <textarea id="holidayInput" rows="5"
           placeholder="2026-12-25&#10;2026-03-01"></textarea>
       </div>
-      <div class="col">
-        <h2>개별 근무 제약</h2>
+      <div class="col col-emph">
+        <h2>개별 근무 제약 <span class="emph-tag">중요</span></h2>
         <p class="hint">한 줄에 하나씩: <b>이름, 대상, 역할</b> (콤마 구분 · 여러 대상은 콤마로 나열, 역할은 맨 끝)</p>
         <textarea id="rulesInput" rows="6"
           placeholder="이권재,12/20,SW&#10;김민송,12/25,DAY&#10;정의정,화,목,제외SW&#10;서지현,3토,제외SW&#10;김민송,12/17,연차&#10;최서락,12/26~12/27,휴무"></textarea>
