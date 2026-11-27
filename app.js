@@ -986,9 +986,9 @@ return new Date(now.getFullYear(), now.getMonth() + 1, 1);
 }
 return now;
 })();
-$("startDate").value = isoDate(now);
+$("startDate").value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 $("startDate").addEventListener("change", (e) => {
-if (e.target.value) { now = new Date(e.target.value + "T00:00:00"); safeGenerate(); }
+if (e.target.value) { now = new Date(e.target.value + "-01T00:00:00"); safeGenerate(); }
 });
 } catch (e) {
 showError("초기화 오류: " + (e && e.message ? e.message + (e.stack ? "\n\n" + e.stack : "") : String(e)));
