@@ -112,20 +112,24 @@
       </div>
       <div class="col col-emph">
         <h2>개별 근무 제약 <span class="emph-tag">중요</span></h2>
-        <p class="hint">한 줄에 하나씩: <b>이름, 대상, 역할</b> (콤마 구분 · 여러 대상은 콤마로 나열, 역할은 맨 끝)</p>
-        <textarea id="rulesInput" rows="6"
-          placeholder="이권재,12/20,SW&#10;김민송,12/25,DAY&#10;정의정,화,목,제외SW&#10;서지현,3토,제외SW&#10;김민송,12/17,연차&#10;최서락,12/26~12/27,휴무"></textarea>
-        <p class="hint">대상: 날짜(2026-12-25, 12/25) · 기간(12/28~12/31) · 요일(화,목) · N번째요일(3토)<br><b>역할:</b> <b>SW 또는 DAY</b> = 그 날짜에 그 인원을 <b>지정(배정)</b> · <b>지정SW/DAY/GY/당번</b> = 지정 · <b>GY·당번</b> = 배정 제외 · <b>제외SW/제외DAY (또는 XSW, ~SW)</b> = SW/DAY 배정 제외 · <b>휴무·연차·지휴</b> = 휴무 처리 · *<br>예) 김민송,12/25,DAY (그 날 김민송 DAY 지정) · 정의정,화,목,제외SW (화·목 SW 배정 제외)</p>
+        <div class="emph-cols">
+          <div class="emph-col">
+            <p class="hint">한 줄에 하나씩: <b>이름, 대상, 역할</b> (콤마 구분 · 여러 대상은 콤마로 나열, 역할은 맨 끝)</p>
+            <textarea id="rulesInput" rows="8"
+              placeholder="이권재,12/20,SW&#10;김민송,12/25,DAY&#10;정의정,화,목,제외SW&#10;서지현,3토,제외SW&#10;김민송,12/17,연차&#10;최서락,12/26~12/27,휴무"></textarea>
+            <p class="hint">대상: 날짜(2026-12-25, 12/25) · 기간(12/28~12/31) · 요일(화,목) · N번째요일(3토)<br><b>역할:</b> <b>SW 또는 DAY</b> = 그 날짜에 그 인원을 <b>지정(배정)</b> · <b>지정SW/DAY/GY/당번</b> = 지정 · <b>GY·당번</b> = 배정 제외 · <b>제외SW/제외DAY (또는 XSW, ~SW)</b> = SW/DAY 배정 제외 · <b>휴무·연차·지휴</b> = 휴무 처리 · *<br>예) 김민송,12/25,DAY (그 날 김민송 DAY 지정) · 정의정,화,목,제외SW (화·목 SW 배정 제외)</p>
+          </div>
+          <div class="emph-col">
+            <h3>지정근무(지근)·지휴</h3>
+            <p class="hint">한 줄에 한 명씩 <b>지근 사용 인원</b>을 입력하세요.<br>미기재 인원은 주말·공휴일 근무 시 <b>특D/특S/특G</b>로 표시됩니다.</p>
+            <textarea id="jigunInput" rows="8"
+              placeholder="신민지&#10;남재현&#10;유다혜"></textarea>
+            <p class="hint"><b>지근 사용 인원</b>의 주말·공휴일 DAY/SW/GY는 <b>지D/지S/지G</b>로 표시됩니다.<br><b>지휴</b>(지정휴무): '개별 근무 제약'에 <b>이름, 날짜, 지휴</b>로 지정하면 그 평일이 <b>지휴</b>로 표시됩니다.</p>
+          </div>
+        </div>
         <div class="btn-row gen-btn">
           <button class="btn primary" id="generateBtn">근무표 생성</button>
         </div>
-      </div>
-      <div class="col">
-        <h2>지정근무(지근)·지휴</h2>
-        <p class="hint">한 줄에 한 명씩 <b>지근 사용 인원</b>을 입력하세요.<br>미기재 인원은 주말·공휴일 근무 시 <b>특D/특S/특G</b>로 표시됩니다.</p>
-        <textarea id="jigunInput" rows="6"
-          placeholder="신민지&#10;남재현&#10;유다혜"></textarea>
-        <p class="hint"><b>지근 사용 인원</b>의 주말·공휴일 DAY/SW/GY는 <b>지D/지S/지G</b>로 표시됩니다.<br><b>지휴</b>(지정휴무): 위 '개별 근무 제약'에 <b>이름 | 날짜 | 지휴</b>로 지정하면 그 평일이 <b>지휴</b>로 표시됩니다.</p>
       </div>
     </section>
 
